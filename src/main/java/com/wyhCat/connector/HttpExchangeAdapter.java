@@ -11,7 +11,7 @@ import java.net.URI;
 /**
  * @author nsh
  * @data 2025/4/7 12:58
- * @description
+ * @description 转换代码，把HttpExchange转化成
  **/
 
 public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeResponse {

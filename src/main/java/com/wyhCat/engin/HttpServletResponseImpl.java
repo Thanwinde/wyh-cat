@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -15,9 +16,10 @@ import java.util.Locale;
 
 public class HttpServletResponseImpl implements HttpServletResponse {
     final HttpExchangeResponse exchangeResponse;
-
+    //这里的 HttpExchangeResponse 是我们自定义 HttpExchange对象,只对外暴露了需要转换成 HttpServletResponse 所必需的接口
     public HttpServletResponseImpl(HttpExchangeResponse exchangeResponse) {
         this.exchangeResponse = exchangeResponse;
+//        this.setContentType("text/html");
     }
 
     @Override
@@ -67,7 +69,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setHeader(String s, String s1) {
-
+        this.exchangeResponse.getResponseHeaders().set(s, s1);
     }
 
     @Override
@@ -127,7 +129,8 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public PrintWriter getWriter() throws IOException {
-        return null;
+        this.exchangeResponse.sendResponseHeaders(200, 0);
+        return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
     }
 
     @Override
@@ -147,7 +150,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentType(String s) {
-
+        setHeader("Content-Type", s);
     }
 
     @Override

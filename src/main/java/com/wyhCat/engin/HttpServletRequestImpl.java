@@ -7,12 +7,15 @@ import jakarta.servlet.http.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class HttpServletRequestImpl implements HttpServletRequest {
     final HttpExchangeRequest exchangeRequest;
-
+    //这里的 HttpExchangeRequest 是我们自定义 HttpExchange对象,只对外暴露了需要转换成 HttpServletRequest所必需的接口
     public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest) {
         this.exchangeRequest = exchangeRequest;
     }
@@ -215,7 +218,32 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getParameter(String s) {
-        return "";
+        String query = this.exchangeRequest.getRequestURI().getRawQuery();
+        if (query != null) {
+            Map<String, String> params = parseQuery(query);
+            return params.get(s);
+        }
+        return null;
+    }
+
+    //截取问询参数并转换成Map
+
+    Map<String, String> parseQuery(String query) {
+        if (query == null || query.isEmpty()) {
+            return Map.of();
+        }
+        String[] ss = query.split("&");
+        //  Pattern.compile("&").split(query);
+        Map<String, String> map = new HashMap<>();
+        for (String s : ss) {
+            int n = s.indexOf('=');
+            if (n >= 1) {
+                String key = s.substring(0, n);
+                String value = s.substring(n + 1);
+                map.putIfAbsent(key, URLDecoder.decode(value, StandardCharsets.UTF_8));
+            }
+        }
+        return map;
     }
 
     @Override
