@@ -6,6 +6,10 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.wyhCat.engin.HttpServletRequestImpl;
 import com.wyhCat.engin.HttpServletResponseImpl;
+import com.wyhCat.engin.ServletContextImpl;
+import com.wyhCat.engin.servlet.HelloServlet;
+import com.wyhCat.engin.servlet.IndexServlet;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -14,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * @author nsh
@@ -25,6 +30,10 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
     final Logger logger = LoggerFactory.getLogger(getClass());
 
     final HttpServer httpServer;
+    //引入jakarta，帮助处理复杂http请求，返回exchange便于操作
+
+    final ServletContextImpl servletContextImpl;
+    //servlet上下文
 
     final String host;
 
@@ -33,6 +42,9 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
     public HttpConnector(String host, int port) throws IOException {
         this.host = host;
         this.port = port;
+        this.servletContextImpl = new ServletContextImpl();
+        this.servletContextImpl.initialize(List.of(IndexServlet.class, HelloServlet.class));
+        //手动导入并初始化
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
         this.httpServer.createContext("/", this);
         this.httpServer.start();
@@ -43,26 +55,20 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
     public void handle(HttpExchange exchange) throws IOException {
 
         logger.info("{}: {}?{}", exchange.getRequestMethod(), exchange.getRequestURI().getPath(), exchange.getRequestURI().getRawQuery());
-        var adapter = new HttpExchangeAdapter(exchange);
-        //HttpExchangeAdapter继承了exchangeRequest和exchangeResponse
-        var request = new HttpServletRequestImpl(adapter);
-        var response = new HttpServletResponseImpl(adapter);
+        HttpExchangeAdapter adapter = new HttpExchangeAdapter(exchange);
+        //HttpExchangeAdapter继承了exchangeRequest和exchangeResponse，方便进行转换处理
+        HttpServletRequestImpl request = new HttpServletRequestImpl(adapter);
+        HttpServletResponseImpl response = new HttpServletResponseImpl(adapter);
         try {
-            process(request, response);
+            servletContextImpl.process(request, response);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
     }
 
-    public void process(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String name = request.getParameter("name");
-        String html = "<h1>Hello, " + (name == null ? "world" : name) + ".</h1>";
-        response.setContentType("text/html;charset=utf-8");
-        response.setStatus(HttpServletResponse.SC_OK);
-        PrintWriter pw = response.getWriter();
-        pw.write(html);
-        pw.close();
-    }
+/*    public void process(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+    }*/
 
     @Override
     public void close() throws Exception {

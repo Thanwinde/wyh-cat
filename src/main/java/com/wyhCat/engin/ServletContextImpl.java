@@ -84,13 +84,13 @@ public class ServletContextImpl implements ServletContext {
             //注解由servlet产生
             WebServlet ws = c.getAnnotation(WebServlet.class);
             if (ws != null) {
-                logger.info("auto register @WebServlet: {}", c.getName());
+                logger.info("自动注册Servlet: {}", c.getName());
                 Class<? extends Servlet> clazz = (Class<? extends Servlet>) c;
                 //转成Servlet类
                 ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
                 //调用addServlet将映射URL加到servletRegistrations中
                 registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
-                //添加到TODO
+                //把注解中的映射url添加到注册中心中
                 registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
                 //设置初始参数（注释中带有的）
             }
@@ -112,7 +112,7 @@ public class ServletContextImpl implements ServletContext {
                 registration.initialized = true;
                 //将该类的注册信息设成已初始化
             } catch (ServletException e) {
-                logger.error("init servlet failed: " + name + " / " + registration.servlet.getClass().getName(), e);
+                logger.error("初始化该组件失败: " + name + " / " + registration.servlet.getClass().getName(), e);
             }
         }
         // important: sort mappings:

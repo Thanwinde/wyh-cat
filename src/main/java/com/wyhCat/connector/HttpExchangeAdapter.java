@@ -15,7 +15,7 @@ import java.net.URI;
  **/
 
 public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeResponse {
-    final HttpExchange  exchange;
+    final HttpExchange exchange;
 
     public HttpExchangeAdapter(HttpExchange exchange) {
         this.exchange = exchange;

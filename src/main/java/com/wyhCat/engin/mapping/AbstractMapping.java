@@ -17,12 +17,7 @@ public class AbstractMapping implements Comparable<AbstractMapping> {
     public boolean matches(String uri) {
         return pattern.matcher(uri).matches();
     }
-    //假如有如下映射:
-    //  /
-    //  *error
-    //  /user
-    //  /user/profile
-    //  优先级重上到下递减，便于快速匹配
+
 
     //这里会生成一个正则表达式，*会替换成.*,特殊字符会加上/防止转意，其他字符会全部保留
     Pattern buildPattern(String urlPattern) {
@@ -63,4 +58,10 @@ public class AbstractMapping implements Comparable<AbstractMapping> {
         }
         return 100000 - this.url.length();
     }
+    //假如有如下映射:
+    //  /
+    //  *error
+    //  /user
+    //  /user/profile
+    //  优先级重上到下递减，便于快速匹配
 }
