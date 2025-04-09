@@ -6,31 +6,18 @@ import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.EventListener;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import com.wyhCat.engin.mapping.FilterMapping;
 import com.wyhCat.engin.mapping.ServletMapping;
 import com.wyhCat.utils.AnnoUtils;
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.FilterRegistration.Dynamic;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRegistration;
-import jakarta.servlet.SessionCookieConfig;
-import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,11 +31,20 @@ public class ServletContextImpl implements ServletContext {
     private Map<String, ServletRegistrationImpl> servletRegistrations = new HashMap<>();
     //管理所有servlet组件的注册信息，用servlet的名字作为key
 
+    private Map<String, FilterRegistrationImpl> filterRegistrations = new HashMap<>();
+    //名字对应的 FilterRegistrationImpl，一个组件对应一个
+
     final Map<String, Servlet> nameToServlets = new HashMap<>();
     //用name映射到对应的servlet，方便
 
+    final Map<String, Filter> nameToFilters = new HashMap<>();
+    //name对应的Filter
+
     final List<ServletMapping> servletMappings = new ArrayList<>();
     //servlet映射表
+
+    final List<FilterMapping> filterMappings = new ArrayList<>();
+    //filter URL映射表
 
     //处理请求：把请求转给servlet处理
     public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
@@ -70,13 +66,33 @@ public class ServletContextImpl implements ServletContext {
             pw.close();
             return;
         }
-        //把请求传给servlet，开始处理
-        servlet.service(request, response);
+
+        List<Filter> enabledFilters = new ArrayList<>();
+        //找到所有匹配上的过滤器，加入enabledFilters中
+        for(FilterMapping mapping : this.filterMappings) {
+            if (mapping.matches(path)) {
+                enabledFilters.add(mapping.filter);
+            }
+        }
+        Filter[] filters = enabledFilters.toArray(Filter[]::new);
+        logger.info(" 由filter {} 处理, servlet: {}", Arrays.toString(filters), servlet);
+        FilterChain chain = new FilterChainImpl(filters, servlet);
+        try {
+            chain.doFilter(request, response);
+        } catch (ServletException e) {
+            logger.error(e.getMessage(), e);
+            throw new IOException(e);
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            throw e;
+        }
+        //FilterChain会在最后调用servlet，所以不用再加上了
+        //servlet.service(request, response);
     }
 
     //用来给servlet初始化
     //每个servlet在创建时具有一个mapping和register，mapping不需要初始化，register需要初始化
-    public void initialize(List<Class<?>> servletClasses) {
+    public void initServlet(List<Class<?>> servletClasses) {
         //遍历每一个servlet
         for (Class<?> c : servletClasses) {
             //获取注解对象
@@ -118,6 +134,38 @@ public class ServletContextImpl implements ServletContext {
         // important: sort mappings:
         Collections.sort(this.servletMappings);
         //对映射进行排序，详见AbstractMapping
+    }
+
+
+    public void initFilters(List<Class<?>> filterClasses) {
+        //和上文的初始化servlet组件一样，先是全部注册再初始化
+        for(Class<?> c : filterClasses) {
+            WebFilter wf = c.getAnnotation(WebFilter.class);
+            if (wf != null) {
+                logger.info("自动注册过滤器Filter: {}", c.getName());
+
+                Class<? extends Filter> clazz = (Class<? extends Filter>) c;
+                FilterRegistration.Dynamic registration = this.addFilter(AnnoUtils.getFilterName(clazz), clazz);
+                registration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST),true,AnnoUtils.getFilterUrlPatterns(clazz));
+                registration.setInitParameters(AnnoUtils.getFilterInitParams(clazz));
+            }
+        }
+
+        for(String name : this.filterRegistrations.keySet()) {
+            FilterRegistrationImpl registration = this.filterRegistrations.get(name);
+
+            try {
+                registration.filter.init(registration.getFilterConfig());
+                this.nameToFilters.put(name, registration.filter);
+                for(String urlPattern : registration.getUrlPatternMappings()){
+                this.filterMappings.add(new FilterMapping(urlPattern, registration.filter));
+            }
+            registration.initialized = true;
+            } catch (ServletException e) {
+                logger.error("过滤器初始化失败:{}", name + " / " + registration.filter.getClass().getName(), e);
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override
@@ -263,6 +311,7 @@ public class ServletContextImpl implements ServletContext {
 
     private <T> T createInstance(Class<T> clazz) throws ServletException {
         try {
+            //TODO  这里不用强转而是直接创建一个新的是为什么?
             Constructor<T> constructor = clazz.getConstructor();
             return constructor.newInstance();
         } catch (ReflectiveOperationException e) {
@@ -333,38 +382,59 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Dynamic addFilter(String filterName, String className) {
-        // TODO Auto-generated method stub
-        return null;
+        if(className == null || className.isEmpty()) {
+            throw new IllegalArgumentException("class name is null or empty.");
+        }
+        Filter filter = null;
+        try {
+            Class<? extends Filter> filterClass = createInstance(className);
+            filter = createInstance(filterClass);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        return addFilter(filterName, filter);
     }
 
     @Override
-    public Dynamic addFilter(String filterName, Filter filter) {
-        // TODO Auto-generated method stub
-        return null;
+    public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+      if (filter == null) {
+          throw new IllegalArgumentException("filter is null.");
+      }
+      if(filterName == null || filterName.isEmpty()) {
+          throw new IllegalArgumentException("filter name is null or empty.");
+      }
+      FilterRegistrationImpl registration = new FilterRegistrationImpl(this,filterName,filter);
+      this.filterRegistrations.put(filterName, registration);
+      return (FilterRegistration.Dynamic) registration;
     }
 
     @Override
     public Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
-        // TODO Auto-generated method stub
-        return null;
+       if (filterClass == null) {
+           throw new IllegalArgumentException("filterClass is null.");
+       }
+       Filter filter = null;
+        try {
+            filter = createInstance(filterClass);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        return addFilter(filterName, filter);
     }
 
     @Override
     public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
-        // TODO Auto-generated method stub
-        return null;
+        return createInstance(clazz);
     }
 
     @Override
     public FilterRegistration getFilterRegistration(String filterName) {
-        // TODO Auto-generated method stub
-        return null;
+        return this.filterRegistrations.get(filterName);
     }
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        // TODO Auto-generated method stub
-        return null;
+        return Map.copyOf(this.filterRegistrations);
     }
 
     @Override

@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 
+import com.sun.net.httpserver.Headers;
 import com.wyhCat.connector.HttpExchangeResponse;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
@@ -22,7 +24,12 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     //这个接口会提供所有HttpServletResponse的接口并将其在内部用HttpExchangeRequest，为“转换器”
     @Override
     public PrintWriter getWriter() throws IOException {
+
         this.exchangeResponse.sendResponseHeaders(200, 0);
+        //TODO实现可以检测到没有设置才修改
+        List<String> list = this.exchangeResponse.getResponseHeaders().get("rcode");
+        //如果servlet里面手动关闭了输入流就会报错
+        //但这句不能删掉，这是标志着响应返回的
         return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
     }
 

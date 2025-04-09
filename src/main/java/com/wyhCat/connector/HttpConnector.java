@@ -7,16 +7,13 @@ import com.sun.net.httpserver.HttpServer;
 import com.wyhCat.engin.HttpServletRequestImpl;
 import com.wyhCat.engin.HttpServletResponseImpl;
 import com.wyhCat.engin.ServletContextImpl;
+import com.wyhCat.engin.filter.HelloFilter;
 import com.wyhCat.engin.servlet.HelloServlet;
 import com.wyhCat.engin.servlet.IndexServlet;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.List;
 
@@ -43,8 +40,9 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
         this.host = host;
         this.port = port;
         this.servletContextImpl = new ServletContextImpl();
-        this.servletContextImpl.initialize(List.of(IndexServlet.class, HelloServlet.class));
-        //手动导入并初始化
+        this.servletContextImpl.initServlet(List.of(IndexServlet.class, HelloServlet.class));
+        this.servletContextImpl.initFilters(List.of(HelloFilter.class));
+        //手动导入servlet和filter并初始化
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
         this.httpServer.createContext("/", this);
         this.httpServer.start();
@@ -59,6 +57,26 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
         //HttpExchangeAdapter继承了exchangeRequest和exchangeResponse，方便进行转换处理
         HttpServletRequestImpl request = new HttpServletRequestImpl(adapter);
         HttpServletResponseImpl response = new HttpServletResponseImpl(adapter);
+        String url = request.getRequestURI();
+        //返回ico
+        if(url.equals("/favicon.ico")){
+            Headers respHeaders = exchange.getResponseHeaders();
+            respHeaders.add("Content-Type", "image/x-icon");
+            exchange.sendResponseHeaders(200, 0);
+
+            InputStream in = getClass().getResourceAsStream("/favicon.ico");
+            byte[] data = null;
+            if (in != null) {
+                data = in.readAllBytes();
+            }else{
+                logger.error("favicon.ico 未读取到");
+            }
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(data);
+                //用try包围之后结束执行之后会自动释放资源
+            }
+            return;
+        }
         try {
             servletContextImpl.process(request, response);
         } catch (Exception e) {
