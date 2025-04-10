@@ -3,11 +3,15 @@ package com.wyhCat.engin;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 
+import com.sun.net.httpserver.Headers;
 import com.wyhCat.connector.HttpExchangeResponse;
 import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.WriteListener;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -15,10 +19,22 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     final HttpExchangeResponse exchangeResponse;
 
+    final Headers headers;
+
     int status = 200;
+    int bufferSize = 1024;
+    Boolean callOutput = null;
+    ServletOutputStream output;
+    PrintWriter writer;
+
+    String contentType;
+    long contentLength = 0;
+    List<Cookie> cookies = null;
+    boolean committed = false;
 
     public HttpServletResponseImpl(HttpExchangeResponse exchangeResponse) {
         this.exchangeResponse = exchangeResponse;
+        this.headers = exchangeResponse.getResponseHeaders();
         this.setContentType("text/html");
     }
     //这个接口会提供所有HttpServletResponse的接口并将其在内部用HttpExchangeRequest，为“转换器”
@@ -26,7 +42,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public PrintWriter getWriter() throws IOException {
 
         this.exchangeResponse.sendResponseHeaders(status, 0);
-
+        committed = true;
         return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
     }
 
@@ -40,8 +56,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         this.exchangeResponse.getResponseHeaders().set(name, value);
     }
 
-    // not implemented yet:
-
     @Override
     public String getCharacterEncoding() {
         // TODO Auto-generated method stub
@@ -50,15 +64,14 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getContentType() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.contentType;
     }
 
     @Override
     public ServletOutputStream getOutputStream() throws IOException {
-        // TODO Auto-generated method stub
+           //todo
         return null;
-    }
+        }
 
     @Override
     public void setCharacterEncoding(String charset) {
@@ -67,12 +80,12 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLength(int len) {
-        // TODO Auto-generated method stub
+        this.contentLength = len;
     }
 
     @Override
     public void setContentLengthLong(long len) {
-        // TODO Auto-generated method stub
+        this.contentLength = len;
     }
 
     @Override
@@ -98,13 +111,14 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean isCommitted() {
-        // TODO Auto-generated method stub
-        return false;
+        return this.committed;
     }
 
     @Override
     public void reset() {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
+        this.status = 200;
+        this.headers.clear();
     }
 
     @Override
@@ -120,13 +134,18 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addCookie(Cookie cookie) {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
+        if (this.cookies == null) {
+            this.cookies = new ArrayList<>();
+        }
+        this.cookies.add(cookie);
+        String cookieValue = cookie.getName() + "=" + cookie.getValue() + ";";
+        addHeader("Set-Cookie", cookieValue);
     }
 
     @Override
     public boolean containsHeader(String name) {
-        // TODO Auto-generated method stub
-        return false;
+        return this.headers.containsKey(name);
     }
 
     @Override
@@ -159,32 +178,39 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(String location) throws IOException {
-        // TODO Auto-generated method stub
+
+        this.exchangeResponse.getResponseHeaders().set("Location", location);
+        this.exchangeResponse.sendResponseHeaders(302, 0);
     }
+
 
     @Override
     public void setDateHeader(String name, long date) {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
+        this.headers.set(name, String.valueOf(date));
     }
 
     @Override
     public void addDateHeader(String name, long date) {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
+        this.headers.add(name, String.valueOf(date));
     }
 
     @Override
     public void addHeader(String name, String value) {
-        // TODO Auto-generated method stub
+        this.headers.add(name, value);
     }
 
     @Override
     public void setIntHeader(String name, int value) {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
+        this.headers.set(name, String.valueOf(value));
     }
 
     @Override
     public void addIntHeader(String name, int value) {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
+        this.headers.add(name, String.valueOf(value));
     }
 
     @Override
@@ -194,25 +220,27 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public int getStatus() {
-        // TODO Auto-generated method stub
-        return 0;
+        return this.status;
     }
 
     @Override
     public String getHeader(String name) {
-        // TODO Auto-generated method stub
-        return null;
+        return this.headers.get(name).toString();
     }
 
     @Override
     public Collection<String> getHeaders(String name) {
-        // TODO Auto-generated method stub
-        return null;
+        return this.headers.get(name);
     }
 
     @Override
     public Collection<String> getHeaderNames() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.headers.keySet();
+    }
+
+    void checkNotCommitted() {
+        if (this.committed) {
+            throw new IllegalStateException("Response is committed.");
+        }
     }
 }

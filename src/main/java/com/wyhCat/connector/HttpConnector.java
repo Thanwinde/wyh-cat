@@ -11,6 +11,7 @@ import com.wyhCat.engin.filter.HelloFilter;
 import com.wyhCat.engin.filter.LogFilter;
 import com.wyhCat.engin.servlet.HelloServlet;
 import com.wyhCat.engin.servlet.IndexServlet;
+import com.wyhCat.engin.servlet.CookieServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,7 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
         this.host = host;
         this.port = port;
         this.servletContextImpl = new ServletContextImpl();
-        this.servletContextImpl.initServlet(List.of(IndexServlet.class, HelloServlet.class));
+        this.servletContextImpl.initServlet(List.of(IndexServlet.class, HelloServlet.class, CookieServlet.class));
         this.servletContextImpl.initFilters(List.of(HelloFilter.class, LogFilter.class));
         //手动导入servlet和filter并初始化
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
@@ -56,8 +57,9 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
         logger.info("{}: {}?{}", exchange.getRequestMethod(), exchange.getRequestURI().getPath(), exchange.getRequestURI().getRawQuery());
         HttpExchangeAdapter adapter = new HttpExchangeAdapter(exchange);
         //HttpExchangeAdapter继承了exchangeRequest和exchangeResponse，方便进行转换处理
-        HttpServletRequestImpl request = new HttpServletRequestImpl(adapter);
+
         HttpServletResponseImpl response = new HttpServletResponseImpl(adapter);
+        HttpServletRequestImpl request = new HttpServletRequestImpl(adapter,response,servletContextImpl);
         String url = request.getRequestURI();
         //返回ico
         if(url.equals("/favicon.ico")){

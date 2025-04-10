@@ -46,6 +46,8 @@ public class ServletContextImpl implements ServletContext {
     final List<FilterMapping> filterMappings = new ArrayList<>();
     //filter URL映射表
 
+     SessionManager sessionManager = new SessionManager(this);
+
     //处理请求：把请求转给servlet处理
     public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         String path = request.getRequestURI();

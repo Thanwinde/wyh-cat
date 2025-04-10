@@ -9,6 +9,10 @@ import java.util.Set;
 //这是存储一个组件的初始参数的类，一个类只有一个
 public class InitParameters extends LazyMap<String> {
 
+    public InitParameters(boolean concurrent) {
+        super(concurrent);
+    }
+
     public boolean setInitParameter(String name, String value) {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Name is null or empty.");

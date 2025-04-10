@@ -21,7 +21,7 @@ public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
     final Filter filter;
     //filter对象
 
-    final InitParameters initParameters = new InitParameters();
+    final InitParameters initParameters = new InitParameters(false);
     //初始参数，每个filter专属一个
 
     final List<String> urlPatterns = new ArrayList<>(4);

@@ -4,16 +4,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
+import com.sun.net.httpserver.Headers;
 import com.wyhCat.connector.HttpExchangeRequest;
+import com.wyhCat.engin.support.Parameters;
+import com.wyhCat.utils.HttpUtils;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.RequestDispatcher;
@@ -33,10 +33,20 @@ import jakarta.servlet.http.Part;
 
 public class HttpServletRequestImpl implements HttpServletRequest {
 
+    final ServletContextImpl servletContext;
     final HttpExchangeRequest exchangeRequest;
+    final HttpServletResponse response;
 
-    public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest) {
+    final Parameters parameters;
+
+    Boolean inputCalled = null;
+
+    public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest,HttpServletResponse response,ServletContextImpl servletContext) {
+        this.servletContext = servletContext;
         this.exchangeRequest = exchangeRequest;
+        this.response = response;
+
+        this.parameters = new Parameters(exchangeRequest, "UTF-8");
     }
     //这个接口会提供所有HttpServletRequest的接口并将其在内部用HttpExchangeRequest，为“转换器”
 
@@ -81,14 +91,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Object getAttribute(String name) {
-        // TODO Auto-generated method stub
-        return null;
+        return this.exchangeRequest.getRequestHeaders().entrySet();
     }
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        // TODO Auto-generated method stub
-        return null;
+        return Collections.enumeration(this.exchangeRequest.getRequestHeaders().keySet());
     }
 
     @Override
@@ -312,9 +320,37 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Cookie[] getCookies() {
-        // TODO Auto-generated method stub
-        return null;
+        String cookiesValue = this.getHeader("Cookie");  // 获取Cookie头部值
+        if (cookiesValue == null)
+            return null;
+        cookiesValue = cookiesValue.substring(1, cookiesValue.length() - 1);
+        List<Cookie> cookiesList = new ArrayList<>();
+
+        // 以分号分割 Cookie 字符串，得到每个 cookie 的内容
+        String[] cookiesArray = cookiesValue.split(";");
+
+        for (String cookiePair : cookiesArray) {
+            cookiePair = cookiePair.trim();  // 去除空白字符
+
+            // 如果 cookie 对应的内容不为空，继续处理
+            if (!cookiePair.isEmpty()) {
+                String[] cookieParts = cookiePair.split("=");
+
+                if (cookieParts.length == 2) {
+                    String name = cookieParts[0].trim();
+                    String value = cookieParts[1].trim();
+
+                    // 创建 Cookie 对象并添加到 cookiesList
+                    Cookie cookie = new Cookie(name, value);
+                    cookiesList.add(cookie);
+                }
+            }
+        }
+
+        // 将 cookiesList 转换为 Cookie[] 数组并返回
+        return cookiesList.toArray(new Cookie[0]);
     }
+
 
     @Override
     public long getDateHeader(String name) {
@@ -324,14 +360,16 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getHeader(String name) {
-        // TODO Auto-generated method stub
-        return null;
+        List<String> list = this.exchangeRequest.getRequestHeaders().get(name);
+        if(list == null || list.isEmpty()) {
+            return null;
+        }
+        return list.toString();
     }
 
     @Override
     public Enumeration<String> getHeaders(String name) {
-        // TODO Auto-generated method stub
-        return null;
+        return Collections.enumeration(this.exchangeRequest.getRequestHeaders().get(name));
     }
 
     @Override
@@ -407,15 +445,38 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
+    //servlet要求获取session，如果cookie中存在会直接返回，否则会根据设置创建一个session返回
     public HttpSession getSession(boolean create) {
-        // TODO Auto-generated method stub
-        return null;
+        String sessionId = null;
+        Cookie[] cookies = getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("JSESSIONID")) {
+                    sessionId = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        if(sessionId == null && !create) {
+            return null;
+        }
+        if(sessionId == null) {
+            if(this.response.isCommitted()){
+                throw new IllegalStateException("Response has already been committed");
+            }
+            sessionId = UUID.randomUUID().toString();
+
+            Cookie cookie = new Cookie("JSESSIONID", sessionId);
+            //在响应头里面加Set-Cookie，这样浏览器会保存下来
+            this.response.addCookie(cookie);
+        }
+        // 创建/获取 并返回
+        return this.servletContext.sessionManager.getSession(sessionId);
     }
 
     @Override
     public HttpSession getSession() {
-        // TODO Auto-generated method stub
-        return null;
+        return getSession(true);
     }
 
     @Override

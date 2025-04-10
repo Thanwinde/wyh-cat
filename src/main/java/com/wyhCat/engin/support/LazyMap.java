@@ -5,11 +5,19 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-//这是一个懒加载的map，只有在实际用到时才会初始化一个map，节省内存
+/**
+ * Lazy proxy which hode a Map.
+ */
 public class LazyMap<V> {
 
     private Map<String, V> map = null;
+    private final boolean concurrent;
+
+    public LazyMap(boolean concurrent) {
+        this.concurrent = concurrent;
+    }
 
     protected V get(String name) {
         if (this.map == null) {
@@ -41,7 +49,7 @@ public class LazyMap<V> {
 
     protected V put(String name, V value) {
         if (this.map == null) {
-            this.map = new HashMap<>();
+            this.map = concurrent ? new ConcurrentHashMap<>() : new HashMap<>();
         }
         return this.map.put(name, value);
     }
