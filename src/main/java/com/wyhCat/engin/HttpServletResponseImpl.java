@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 
-import com.sun.net.httpserver.Headers;
 import com.wyhCat.connector.HttpExchangeResponse;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
@@ -17,6 +15,8 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     final HttpExchangeResponse exchangeResponse;
 
+    int status = 200;
+
     public HttpServletResponseImpl(HttpExchangeResponse exchangeResponse) {
         this.exchangeResponse = exchangeResponse;
         this.setContentType("text/html");
@@ -25,11 +25,8 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public PrintWriter getWriter() throws IOException {
 
-        this.exchangeResponse.sendResponseHeaders(200, 0);
-        //TODO实现可以检测到没有设置才修改
-        List<String> list = this.exchangeResponse.getResponseHeaders().get("rcode");
-        //如果servlet里面手动关闭了输入流就会报错
-        //但这句不能删掉，这是标志着响应返回的
+        this.exchangeResponse.sendResponseHeaders(status, 0);
+
         return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
     }
 
@@ -146,12 +143,18 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(int sc, String msg) throws IOException {
-        // TODO Auto-generated method stub
+        this.status = sc;
+        PrintWriter pw = getWriter();
+        pw.write(String.format("<h1>%d %s</h1>", sc, msg));
+        pw.close();
     }
 
     @Override
     public void sendError(int sc) throws IOException {
-        // TODO Auto-generated method stub
+        this.status = sc;
+        PrintWriter pw = getWriter();
+        pw.write(String.format("<h1>%d %s</h1>", sc, "Error!"));
+        pw.close();
     }
 
     @Override
@@ -186,7 +189,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(int sc) {
-        // TODO Auto-generated method stub
+        this.status = sc;
     }
 
     @Override

@@ -1,8 +1,11 @@
 package com.wyhCat.engin.filter;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Set;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,8 +15,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.annotation.WebFilter;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+
 
 @WebFilter(urlPatterns = "/hello")
 public class HelloFilter implements Filter {
@@ -32,11 +34,12 @@ public class HelloFilter implements Filter {
         } else {
             logger.warn("Access denied: name = {}", name);
             HttpServletResponse resp = (HttpServletResponse) response;
-            resp.sendError(403, "Forbidden");
-            resp.setContentType("text/html");
-            resp.getWriter().println("<h1>Access denied</h1>");
-            //resp.getWriter().close();
-            //如果filter关闭了输入流，servlet就不能再对其修改，就会报错
+            //resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            //resp.setContentType("text/html");
+            //PrintWriter writer = resp.getWriter();
+            //writer.println("<h1>Access denied!!!</h1>");
+            //writer.close();
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN,"Access denied");
         }
     }
 }

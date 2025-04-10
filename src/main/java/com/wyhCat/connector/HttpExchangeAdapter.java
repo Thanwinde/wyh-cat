@@ -25,6 +25,10 @@ public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeRes
         this.exchange = exchange;
     }
 
+    public Integer getStatusCode() {
+        return exchange.getResponseCode();
+    }
+
     @Override
     public String getRequestMethod() {
         return this.exchange.getRequestMethod();
