@@ -75,7 +75,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(String charset) {
-        // TODO Auto-generated method stub
+        this.exchangeResponse.getResponseHeaders().set("Content-Encoding", charset);
     }
 
     @Override
@@ -137,10 +137,14 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         checkNotCommitted();
         if (this.cookies == null) {
             this.cookies = new ArrayList<>();
+            addHeader("Set-Cookie","HTTPOnly;");
+            addHeader("Set-Cookie","Path=/;");
+
         }
         this.cookies.add(cookie);
         String cookieValue = cookie.getName() + "=" + cookie.getValue() + ";";
         addHeader("Set-Cookie", cookieValue);
+
     }
 
     @Override

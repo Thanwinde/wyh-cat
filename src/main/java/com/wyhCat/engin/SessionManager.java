@@ -22,12 +22,31 @@ public class SessionManager {
 
     Map<String, HttpSessionImpl> sessions = new HashMap<>();
 
-    //默认超时时间
-    int inactiveInterval = 1000;
+    //默认超时时间,单位毫秒
+    int inactiveInterval = 10 * 60 * 1000;
 
     public SessionManager(ServletContextImpl servletContext) {
         this.servletContext = servletContext;
         logger.info("Session管理器启动");
+
+        Thread thread = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(60_000L);
+                } catch (InterruptedException e) {
+                    break;
+                }
+                long now = System.currentTimeMillis();
+                for(HttpSessionImpl session : sessions.values()) {
+                    if(session.getLastAccessedTime() + inactiveInterval < now) {
+                        logger.info("session过期: {}", session.getId());
+                        session.invalidate();
+                    }
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     public HttpSession getSession(String sessionId) {
