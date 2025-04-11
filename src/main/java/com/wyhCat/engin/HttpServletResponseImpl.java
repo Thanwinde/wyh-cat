@@ -1,6 +1,7 @@
 package com.wyhCat.engin;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -40,10 +41,17 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     //这个接口会提供所有HttpServletResponse的接口并将其在内部用HttpExchangeRequest，为“转换器”
     @Override
     public PrintWriter getWriter() throws IOException {
-
-        this.exchangeResponse.sendResponseHeaders(status, 0);
-        committed = true;
-        return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
+        if (callOutput == null) {
+            this.exchangeResponse.sendResponseHeaders(status, 0);
+            committed = true;
+            this.writer = new PrintWriter(new OutputStreamWriter(exchangeResponse.getResponseBody(), StandardCharsets.UTF_8));
+            this.callOutput = Boolean.FALSE;
+            return writer;
+        }
+        if (!callOutput.booleanValue()) {
+            return this.writer;
+        }
+        throw new IllegalStateException("Cannot open writer when output stream is opened.");
     }
 
     @Override
@@ -58,8 +66,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getCharacterEncoding() {
-        // TODO Auto-generated method stub
-        return null;
+        return exchangeResponse.getResponseHeaders().getFirst("Content-Encoding");
     }
 
     @Override
@@ -69,9 +76,17 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public ServletOutputStream getOutputStream() throws IOException {
-           //todo
-        return null;
+        if(callOutput == null) {
+            this.exchangeResponse.sendResponseHeaders(this.status, 0);
+            this.output = new ServletOutputStreamImpl(this.exchangeResponse.getResponseBody());
+            this.callOutput = Boolean.TRUE;
+            return this.output;
         }
+        if(callOutput.booleanValue()) {
+            return this.output;
+        }
+        throw new IllegalStateException("Cannot open output stream when writer is opened.");
+    }
 
     @Override
     public void setCharacterEncoding(String charset) {
@@ -90,23 +105,34 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setBufferSize(int size) {
-        // TODO Auto-generated method stub
+        if (this.callOutput != null) {
+            throw new IllegalStateException("Output stream or writer is opened.");
+        }
+        if(size < 0)
+            throw new IllegalArgumentException("Buffer size must be positive");
+        this.bufferSize = size;
     }
 
     @Override
     public int getBufferSize() {
-        // TODO Auto-generated method stub
-        return 0;
+        return this.bufferSize;
     }
 
     @Override
     public void flushBuffer() throws IOException {
-        // TODO Auto-generated method stub
+        if(this.callOutput == null){
+            throw new IllegalStateException("Output stream or writer is not opened.");
+        }
+        if(this.callOutput.booleanValue()){
+            this.output.flush();
+        }else{
+            this.writer.flush();
+        }
     }
 
     @Override
     public void resetBuffer() {
-        // TODO Auto-generated method stub
+        checkNotCommitted();
     }
 
     @Override
@@ -167,6 +193,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void sendError(int sc, String msg) throws IOException {
         this.status = sc;
+        this.exchangeResponse.sendResponseHeaders(this.status, 0);
         PrintWriter pw = getWriter();
         pw.write(String.format("<h1>%d %s</h1>", sc, msg));
         pw.close();
@@ -175,6 +202,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void sendError(int sc) throws IOException {
         this.status = sc;
+        this.exchangeResponse.sendResponseHeaders(this.status, 0);
         PrintWriter pw = getWriter();
         pw.write(String.format("<h1>%d %s</h1>", sc, "Error!"));
         pw.close();
@@ -182,9 +210,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(String location) throws IOException {
-
+        this.status = 302;
         this.exchangeResponse.getResponseHeaders().set("Location", location);
-        this.exchangeResponse.sendResponseHeaders(302, 0);
+        this.exchangeResponse.sendResponseHeaders(this.status, 0);
     }
 
 

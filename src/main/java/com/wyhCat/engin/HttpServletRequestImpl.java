@@ -1,8 +1,6 @@
 package com.wyhCat.engin;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URLDecoder;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
@@ -41,9 +39,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     Boolean inputCalled = null;
 
+    Headers headers;
+
     public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest,HttpServletResponse response,ServletContextImpl servletContext) {
         this.servletContext = servletContext;
         this.exchangeRequest = exchangeRequest;
+        this.headers = this.exchangeRequest.getRequestHeaders();
         this.response = response;
 
         this.parameters = new Parameters(exchangeRequest, "UTF-8");
@@ -62,12 +63,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getParameter(String name) {
-        String query = this.exchangeRequest.getRequestURI().getRawQuery();
-        if (query != null) {
-            Map<String, String> params = parseQuery(query);
-            return params.get(name);
-        }
-        return null;
+        return this.parameters.getParameter(name);
     }
 
     Map<String, String> parseQuery(String query) {
@@ -124,32 +120,32 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getContentType() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.exchangeRequest.getRequestHeaders().get("Content-Type").toString();
     }
 
     @Override
+    //获取字节输入流，读取二进制数据（如文件上传、图片、音频、视频等），不能同时再调用 getReader
     public ServletInputStream getInputStream() throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+        if(this.inputCalled == null) {
+            this.inputCalled = true;
+            return new ServletInputStreamImpl(this.exchangeRequest.getRequestBody());
+        }
+        throw new IllegalStateException("Cannot reopen input stream after " + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called.");
     }
 
     @Override
     public Enumeration<String> getParameterNames() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.parameters.getParameterNames();
     }
 
     @Override
     public String[] getParameterValues(String name) {
-        // TODO Auto-generated method stub
-        return null;
+        return this.parameters.getParameterValues(name);
     }
 
     @Override
     public Map<String, String[]> getParameterMap() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.parameters.getParameterMap();
     }
 
     @Override
@@ -176,10 +172,15 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return 0;
     }
 
+    //通过字符流读取，适用于读取文本，不能与 getInputStream 一同使用
     @Override
     public BufferedReader getReader() throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+        if (this.inputCalled == null) {
+            this.inputCalled = Boolean.FALSE;
+            return new BufferedReader(new InputStreamReader(new ByteArrayInputStream(this.exchangeRequest.getRequestBody()), StandardCharsets.UTF_8));
+        }
+        throw new IllegalStateException("Cannot reopen input stream after " + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called.");
+
     }
 
     @Override
@@ -354,7 +355,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public long getDateHeader(String name) {
-        // TODO Auto-generated method stub
+        //todo
         return 0;
     }
 
@@ -374,8 +375,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<String> getHeaderNames() {
-        // TODO Auto-generated method stub
-        return null;
+        return Collections.enumeration(this.headers.keySet());
     }
 
     @Override
@@ -428,8 +428,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestedSessionId() {
-        // TODO Auto-generated method stub
-        return null;
+        HttpSession session = getSession(true);
+        return session != null ? session.getId() : null;
     }
 
     @Override
@@ -481,13 +481,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String changeSessionId() {
-        // TODO Auto-generated method stub
-        return null;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public boolean isRequestedSessionIdValid() {
-        // TODO Auto-generated method stub
         return false;
     }
 
