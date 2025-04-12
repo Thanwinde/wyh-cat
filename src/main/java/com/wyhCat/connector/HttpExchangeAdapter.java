@@ -13,7 +13,7 @@ import java.net.URI;
 /**
  * @author nsh
  * @data 2025/4/7 12:58
- * @description 转换代码，把HttpExchange转化成
+ * @description 作为一个转换器，把HttpExchange中可能会用到的接口抽取出来，方便servlet容器对其使用
  **/
 
 public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeResponse {

@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 /**
  * @author nsh
  * @data 2025/4/9 12:56
- * @description
+ * @description 这个类用来对于filter的一条映射url
  **/
 public class FilterMapping extends AbstractMapping {
 

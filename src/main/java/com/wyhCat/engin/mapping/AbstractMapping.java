@@ -2,9 +2,11 @@ package com.wyhCat.engin.mapping;
 
 import java.util.regex.Pattern;
 
+//这里实现Comparable接口，能对其进行方便的自定义排序
+//这个主要是对servlet组件映射服务，一个组件每一个URL都会通过ServletMapping继承这个类
 public class AbstractMapping implements Comparable<AbstractMapping> {
 
-    //url的对应的正则表达式
+    //一个url的对应的正则表达式
     final Pattern pattern;
     //完整的映射url
     final String url;
@@ -14,6 +16,7 @@ public class AbstractMapping implements Comparable<AbstractMapping> {
         this.pattern = buildPattern(urlPattern);
     }
 
+    //判断是否符合，用正则表达式来判断传入的URL是否符合该映射
     public boolean matches(String uri) {
         return pattern.matcher(uri).matches();
     }
@@ -38,7 +41,7 @@ public class AbstractMapping implements Comparable<AbstractMapping> {
         return Pattern.compile(sb.toString());
     }
 
-    //比较两个映射哪一个更合适
+    //比较两个对象哪个优先级更高
     @Override
     public int compareTo(AbstractMapping o) {
         int cmp = this.priority() - o.priority();
@@ -60,8 +63,8 @@ public class AbstractMapping implements Comparable<AbstractMapping> {
     }
     //假如有如下映射:
     //  /
-    //  *error
+    //  */error
     //  /user
     //  /user/profile
-    //  优先级重上到下递减，便于快速匹配
+    //  优先级从上到下递减，对于servlet组件可能没有用，但对于过滤器来说需要从上到下匹配
 }

@@ -7,10 +7,11 @@ import java.util.Objects;
 /**
 *   @author nsh
 *   @data 2025/4/10 15:06
-*   @description 
+*   @description 继承了LazyMap的Attributes类，用来懒加载的管理属性，适用于session，cookie等
 **/public class Attributes extends LazyMap<Object>{
     public Attributes(boolean concurrent) {
         super(concurrent);
+        //concurrent为真就会转而采用线程安全的map
     }
 
     public Attributes() {

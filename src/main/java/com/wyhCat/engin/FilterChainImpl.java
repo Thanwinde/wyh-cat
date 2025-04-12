@@ -4,6 +4,7 @@ import jakarta.servlet.*;
 
 import java.io.IOException;
 
+//对于过滤器链的实现，会在成功调用完所有过滤器后调用servlet组件
 public class FilterChainImpl implements FilterChain {
     final Filter[] filters;
     final Servlet servlet;

@@ -11,20 +11,17 @@ import java.io.IOException;
 /**
  * @author nsh
  * @data 2025/4/7 10:57
- * @description wyhCat的启动类与HTTP实例
+ * @description wyhCat的启动类
  **/
 @Slf4j
 public class Starter {
 
-    final Logger logger = LoggerFactory.getLogger(getClass());
 
     public static void main(String[] args) {
         String host = "localhost";
         int port = 8080;
         try {
-
             HttpConnector connector = new HttpConnector(host,port);
-            //通过构造函数启动HTTP服务器
             log.info("创建HTTP服务器" );
             while(true) {
                 try {
@@ -32,6 +29,7 @@ public class Starter {
                 } catch (InterruptedException e) {
                     break;
                 }
+                //对于没有被处理一直传上来的异常就关闭
             }
 
         } catch ( IOException e) {

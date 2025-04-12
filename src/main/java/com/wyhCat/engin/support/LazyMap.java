@@ -7,9 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Lazy proxy which hode a Map.
- */
+//实现了一个懒加载map，可更改成线程安全的map
 public class LazyMap<V> {
 
     private Map<String, V> map = null;

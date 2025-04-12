@@ -14,6 +14,8 @@ import java.util.Map;
 
 
 //用于处理请求中的query参数和表单数据
+//没有set
+//只用来读取
 public class Parameters {
 
     //请求主体
@@ -62,7 +64,7 @@ public class Parameters {
         return this.parameters;
     }
 
-
+    //会截取URL中的参数以及post表单的数据
     Map<String, String[]> initParameters() {
         Map<String, List<String>> params = new HashMap<>();
         String query = this.exchangeRequest.getRequestURI().getRawQuery();
@@ -98,7 +100,7 @@ public class Parameters {
         if (params.isEmpty()) {
             return Map.of();
         }
-        //把包装类转换成原始数组返回
+        //把包装类转换成原始数组返回，大部分servlet都是此种
         Map<String, String[]> paramsMap = new HashMap<>();
         for (String key : params.keySet()) {
             List<String> values = params.get(key);

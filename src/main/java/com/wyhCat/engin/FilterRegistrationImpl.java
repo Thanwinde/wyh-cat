@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * @author nsh
  * @data 2025/4/9 13:10
- * @description
+ * @description 对于filter的实现，每个filter对应一个FilterRegistrationImpl
  **/
 public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
 
@@ -28,7 +28,7 @@ public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
     //记录着该filter的所有映射地址
 
     boolean initialized = false;
-    //未初始化
+    //默认未初始化
 
     public FilterRegistrationImpl(ServletContextImpl servletContext, String filterName, Filter filter) {
         this.servletContext = servletContext;
@@ -36,7 +36,7 @@ public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
         this.filter = filter;
     }
 
-    //提供给servlet的接口
+    //提供给servlet容器的接口
     public FilterConfig getFilterConfig() {
         return new FilterConfig() {
             @Override
@@ -69,15 +69,18 @@ public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
 
     @Override
     public Collection<String> getServletNameMappings() {
-        //TODO
-        return List.of();
+        return List.of(name);
     }
 
     @Override
     public void addMappingForUrlPatterns(EnumSet<DispatcherType> dispatcherTypes, boolean isMatchAfter, String... urlPatterns) {
         checkNotInitialized("addMappingForUrlPatterns");
         if (!dispatcherTypes.contains(DispatcherType.REQUEST) || dispatcherTypes.size() != 1) {
-            //看看分派类型是不是REQUEST，filter只支持用户直接发起的请求
+            //看看分派类型是不是REQUEST，filter目前只支持用户直接发起的请求
+            //FORWARD 转发
+            //INCLUDE 表示请求包含了另一个资源的输出内容,如jsp
+            //ASYNC 表示请求处于异步（asynchronous）处理状态
+            //ERROR 表示请求是在错误处理流程中转发的
             throw new IllegalArgumentException("Only support DispatcherType.REQUEST.");
         }
         if (urlPatterns == null || urlPatterns.length == 0) {

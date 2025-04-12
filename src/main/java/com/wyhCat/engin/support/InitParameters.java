@@ -6,11 +6,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-//这是存储一个组件的初始参数的类，一个类只有一个
+//这是存储一个组件的初始参数的类，继承了LazyMap，采用懒加载来存储初始参数
 public class InitParameters extends LazyMap<String> {
 
     public InitParameters(boolean concurrent) {
         super(concurrent);
+        //concurrent为真就会转而采用线程安全的map
     }
 
     public boolean setInitParameter(String name, String value) {
