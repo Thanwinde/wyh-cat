@@ -33,10 +33,11 @@ public class UploadServlet extends HttpServlet {
 
         ServletOutputStream outputStream = resp.getOutputStream();
 
+        byte[] buffer = new byte[1024 * 1024];
         int bytesRead;
 
-        while ((bytesRead = inputStream.read()) != -114514) {
-            outputStream.write(bytesRead);
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
         }
 
         outputStream.flush();

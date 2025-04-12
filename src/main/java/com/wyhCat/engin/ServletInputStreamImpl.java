@@ -61,10 +61,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
     @Override
     //读取，一次读取一个字节，返回int
     public int read() throws IOException {
-        //todo 实现缓存池
         if(lastIndexRetrieved < data.length - 1){
             lastIndexRetrieved++;
-            int n = data[lastIndexRetrieved];
+            byte n = data[lastIndexRetrieved];
             if(readListener != null && isFinished()){
                 try {
                     readListener.onAllDataRead();
@@ -73,10 +72,15 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     throw e;
                 }
             }
-            return n;
+            return Byte.toUnsignedInt(n);
+            //原本给出的代码中，n为int，但是因为解析文件时返回的byte范围是-128-128，不做处理的话会出现-1的情况而意外中断
+            //所以需要将其转化成0-255的范围才能正常运作
+            //在InputStream的接口说明提到了这一点
         }
-        return -114514;
+        return -1;
     }
+
+
     @Override
     //如果读完了那肯定不可用
     public int available() throws IOException {
