@@ -10,7 +10,10 @@ import com.wyhCat.engin.ServletContextImpl;
 import com.wyhCat.engin.filter.HelloFilter;
 import com.wyhCat.engin.filter.LogFilter;
 import com.wyhCat.engin.servlet.*;
+import com.wyhCat.engin.servlet.listener.MySessionAttributeListener;
+import com.wyhCat.engin.servlet.listener.MySessionListener;
 import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletContextListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +46,7 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
         this.servletContextImpl = new ServletContextImpl();
         this.servletContextImpl.initServlet(List.of(UploadServlet.class, HelloServlet.class, SessionGetServlet.class, SessionServlet.class, PostServlet.class));
         this.servletContextImpl.initFilters(List.of(HelloFilter.class, LogFilter.class));
+        this.servletContextImpl.initListeners(List.of(MySessionAttributeListener.class, MySessionListener.class));
         //手动导入servlet和filter并初始化
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
         this.httpServer.createContext("/", this);

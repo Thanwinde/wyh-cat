@@ -53,6 +53,7 @@ public class SessionManager {
         HttpSessionImpl session = sessions.get(sessionId);
         if (session == null) {
             session = new HttpSessionImpl(this.servletContext, sessionId, inactiveInterval);
+            this.servletContext.invokeSessionCreated(session);
             sessions.put(sessionId,session);
         }else{
             session.lastAccessedTime = System.currentTimeMillis();
@@ -61,6 +62,7 @@ public class SessionManager {
     }
 
     public void remove(HttpSession session) {
+        this.servletContext.invokeSessionDestroyed(session);
         this.sessions.remove(session.getId());
     }
 }

@@ -323,7 +323,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public Cookie[] getCookies() {
         String cookiesValue = this.getHeader("Cookie");  // 获取Cookie头部值
         if (cookiesValue == null)
-            return null;
+            return new Cookie[0];
         cookiesValue = cookiesValue.substring(1, cookiesValue.length() - 1);
         List<Cookie> cookiesList = new ArrayList<>();
 

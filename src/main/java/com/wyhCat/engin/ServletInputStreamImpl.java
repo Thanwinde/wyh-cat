@@ -18,7 +18,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     //读取指针
     private int lastIndexRetrieved = -1;
 
-    //
+    //设置ReadListener
     private ReadListener readListener = null;
 
     //构造函数，传入数据
@@ -39,7 +39,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     }
 
     @Override
-    //
+    //设置读入监听器（未实现）
     public void setReadListener(ReadListener readListener) {
         this.readListener = readListener;
         if (!isFinished()) {
@@ -61,6 +61,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     @Override
     //读取，一次读取一个字节，返回int
     public int read() throws IOException {
+        //todo 实现缓存池
         if(lastIndexRetrieved < data.length - 1){
             lastIndexRetrieved++;
             int n = data[lastIndexRetrieved];

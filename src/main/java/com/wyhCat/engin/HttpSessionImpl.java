@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import com.wyhCat.engin.support.Attributes;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSessionBindingEvent;
 
 //这是一个session的实现类，一个session对应一个
 public class HttpSessionImpl implements HttpSession {
@@ -105,6 +106,12 @@ public class HttpSessionImpl implements HttpSession {
         if (value == null) {
             removeAttribute(name);
         } else {
+            if(getAttribute(name) == null) {
+                this.servletContext.invokeSessionAttributeAdded(new HttpSessionBindingEvent(this, name, value));
+
+            }else
+                this.servletContext.invokeSessionAttributeReplaced(new HttpSessionBindingEvent(this, name, value));
+
             this.attributes.setAttribute(name, value);
         }
     }
@@ -113,6 +120,7 @@ public class HttpSessionImpl implements HttpSession {
     public void removeAttribute(String name) {
         //移除参数
         checkValid();
+        this.servletContext.invokeSessionAttributeRemoved(new HttpSessionBindingEvent(this, name, null));
         this.attributes.removeAttribute(name);
     }
 

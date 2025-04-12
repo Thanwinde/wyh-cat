@@ -8,19 +8,20 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
+
 import com.wyhCat.engin.mapping.FilterMapping;
 import com.wyhCat.engin.mapping.ServletMapping;
 import com.wyhCat.utils.AnnoUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.FilterRegistration.Dynamic;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+
 //一个wyhcat只有一个ServletContextImpl，存储了组件的注册信息与mapping映射
 //一个组件对应着一个注册信息，多条mapping映射
 public class ServletContextImpl implements ServletContext {
@@ -47,6 +48,13 @@ public class ServletContextImpl implements ServletContext {
     //filter URL映射表
 
      SessionManager sessionManager = new SessionManager(this);
+     //session管理器
+
+    List<HttpSessionListener> httpSessionListeners;
+    //session监听器
+
+    List<HttpSessionAttributeListener> httpSessionAttributeListeners;
+    //session属性监听器
 
     //处理请求：把请求转给servlet处理
     public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
@@ -167,6 +175,13 @@ public class ServletContextImpl implements ServletContext {
                 logger.error("过滤器初始化失败:{}", name + " / " + registration.filter.getClass().getName(), e);
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    public void initListeners(List<Class<?>> listenerClasses) {
+        for(Class<?> c : listenerClasses) {
+            this.addListener((Class<? extends EventListener>) c);
+            logger.info("加载Listener: {}", c.getName());
         }
     }
 
@@ -464,17 +479,69 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(String className) {
-        // TODO Auto-generated method stub
+        try {
+            addListener((Class<? extends EventListener>) Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public <T extends EventListener> void addListener(T t) {
-        // TODO Auto-generated method stub
+        if(t instanceof HttpSessionListener){
+            if(this.httpSessionListeners == null){
+                this.httpSessionListeners = new ArrayList<>();
+            }
+            this.httpSessionListeners.add((HttpSessionListener) t);
+        }else
+        if(t instanceof HttpSessionAttributeListener){
+            if(this.httpSessionAttributeListeners == null){
+                this.httpSessionAttributeListeners = new ArrayList<>();
+            }
+            this.httpSessionAttributeListeners.add((HttpSessionAttributeListener) t);
+        }else
+            throw new UnsupportedOperationException("尚不支持此监听器");
     }
 
     @Override
     public void addListener(Class<? extends EventListener> listenerClass) {
-        // TODO Auto-generated method stub
+        try {
+            addListener(listenerClass.newInstance());
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void invokeSessionCreated(HttpSession session) {
+        HttpSessionEvent event = new HttpSessionEvent(session);
+        for(HttpSessionListener listener : this.httpSessionListeners){
+            listener.sessionCreated(event);
+        }
+    }
+
+    public void invokeSessionDestroyed(HttpSession session) {
+        HttpSessionEvent event = new HttpSessionEvent(session);
+        for(HttpSessionListener listener : this.httpSessionListeners){
+            listener.sessionDestroyed(event);
+        }
+    }
+
+    public void invokeSessionAttributeAdded(HttpSessionBindingEvent event) {
+        for(HttpSessionAttributeListener listener : this.httpSessionAttributeListeners){
+            listener.attributeAdded(event);
+        }
+    }
+
+    public void invokeSessionAttributeRemoved(HttpSessionBindingEvent event) {
+        for(HttpSessionAttributeListener listener : this.httpSessionAttributeListeners){
+            listener.attributeRemoved(event);
+        }
+    }
+
+    public void invokeSessionAttributeReplaced(HttpSessionBindingEvent event) {
+        for(HttpSessionAttributeListener listener : this.httpSessionAttributeListeners){
+            listener.attributeReplaced(event);
+        }
     }
 
     @Override
