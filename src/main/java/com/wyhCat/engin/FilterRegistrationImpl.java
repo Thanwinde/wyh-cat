@@ -119,11 +119,13 @@ public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
 
     @Override
     public String getInitParameter(String s) {
+        //获取初始参数
         return this.initParameters.getInitParameter(s);
     }
 
     @Override
     public Set<String> setInitParameters(Map<String, String> initParameters) {
+        //设置初始参数
         checkNotInitialized("setInitParameter");
         return this.initParameters.setInitParameters(initParameters);
     }
@@ -141,6 +143,7 @@ public class FilterRegistrationImpl implements FilterRegistration.Dynamic {
 
     @Override
     public void setAsyncSupported(boolean b) {
+        //暂不支持异步
         checkNotInitialized("setInitParameter");
         if (b) {
             throw new UnsupportedOperationException("Async is not supported.");

@@ -7,13 +7,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.wyhCat.engin.HttpServletRequestImpl;
 import com.wyhCat.engin.HttpServletResponseImpl;
 import com.wyhCat.engin.ServletContextImpl;
-import com.wyhCat.engin.filter.HelloFilter;
-import com.wyhCat.engin.filter.LogFilter;
-import com.wyhCat.engin.servlet.*;
-import com.wyhCat.engin.servlet.listener.MySessionAttributeListener;
-import com.wyhCat.engin.servlet.listener.MySessionListener;
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletContextListener;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,14 +37,17 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
     final int port;
     //设置监听端口(8080)
 
-    public HttpConnector(String host, int port) throws IOException {
+    final ClassLoader classLoader;
+
+    public HttpConnector(String host, int port, List<Class<?>> classes, List<Class<?>> filters, List<Class<?>> listeners, ClassLoader classLoader) throws IOException {
         this.host = host;
         this.port = port;
+        this.classLoader = classLoader;
         this.servletContextImpl = new ServletContextImpl();
         //创建servlet上下文,servlet服务器的核心
-        this.servletContextImpl.initServlet(List.of(UploadServlet.class, HelloServlet.class, SessionGetServlet.class, SessionServlet.class, PostServlet.class));
-        this.servletContextImpl.initFilters(List.of(HelloFilter.class, LogFilter.class));
-        this.servletContextImpl.initListeners(List.of(MySessionAttributeListener.class, MySessionListener.class));
+        this.servletContextImpl.initServlet(classes);
+        this.servletContextImpl.initFilters(filters);
+        this.servletContextImpl.initListeners(listeners);
         //暂时手动导入servlet，filter和listener并初始化
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
         //创建一个绑定了该host，port的http实例
@@ -93,10 +90,13 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
             return;
         }
         try {
+            Thread.currentThread().setContextClassLoader(this.classLoader);
             servletContextImpl.process(request, response);
             //把请求传给servlet容器处理
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
+        }finally {
+            Thread.currentThread().setContextClassLoader(null);
         }
     }
 

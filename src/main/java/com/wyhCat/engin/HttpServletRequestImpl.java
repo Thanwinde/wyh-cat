@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import com.sun.net.httpserver.Headers;
 import com.wyhCat.connector.HttpExchangeRequest;
+import com.wyhCat.engin.support.Attributes;
 import com.wyhCat.engin.support.Parameters;
 import com.wyhCat.utils.HttpUtils;
 import jakarta.servlet.AsyncContext;
@@ -28,17 +29,22 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpUpgradeHandler;
 import jakarta.servlet.http.Part;
 
-
+//这里是对servlet规范请求的实现
+//涵盖了请求中会用到的所有方法
 public class HttpServletRequestImpl implements HttpServletRequest {
 
     final ServletContextImpl servletContext;
+    //获取servlet上下文
     final HttpExchangeRequest exchangeRequest;
+    //获取响应，以便写入cookie，session等
     final HttpServletResponse response;
-
+    //请求的参数，包括表单，query参数等
     final Parameters parameters;
-
+    //请求参数
+    final Attributes attributes;
+    //记录是采用了InputStream还是reader，两者不能一起使用
     Boolean inputCalled = null;
-
+    //请求头，方便操作
     Headers headers;
 
     public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest,HttpServletResponse response,ServletContextImpl servletContext) {
@@ -48,8 +54,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         this.response = response;
 
         this.parameters = new Parameters(exchangeRequest, "UTF-8");
+        this.attributes = new Attributes();
     }
-    //这个接口会提供所有HttpServletRequest的接口并将其在内部用HttpExchangeRequest，为“转换器”
+    //这个接口会提供所有HttpServletRequest的接口并将其在内部用HttpExchangeRequest，为 转换器模式
 
     @Override
     public String getMethod() {
@@ -83,11 +90,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return map;
     }
 
-    //提取出query参数
+    //提取出query参数，现已整合到parameters之中
 
     @Override
     public Object getAttribute(String name) {
-        return this.exchangeRequest.getRequestHeaders().entrySet();
+        return this.exchangeRequest.getRequestHeaders().get(name);
     }
 
     @Override
@@ -97,25 +104,26 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.exchangeRequest.getRequestHeaders().get("Content-Encoding").toString();
     }
 
     @Override
-    public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
-        // TODO Auto-generated method stub
+    public void setCharacterEncoding(String env) {
+        this.response.setCharacterEncoding(env);
     }
 
     @Override
     public int getContentLength() {
-        // TODO Auto-generated method stub
-        return 0;
+        try {
+            return this.exchangeRequest.getRequestBody().length;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public long getContentLengthLong() {
-        // TODO Auto-generated method stub
-        return 0;
+        return getContentLength();
     }
 
     @Override
@@ -127,7 +135,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     //获取字节输入流，读取二进制数据（如文件上传、图片、音频、视频等），不能同时再调用 getReader
     public ServletInputStream getInputStream() throws IOException {
         if(this.inputCalled == null) {
-            this.inputCalled = true;
+            this.inputCalled = (Boolean) true;
             return new ServletInputStreamImpl(this.exchangeRequest.getRequestBody());
         }
         throw new IllegalStateException("Cannot reopen input stream after " + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called.");
@@ -150,26 +158,22 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.exchangeRequest.getProtocol();
     }
 
     @Override
     public String getScheme() {
-        // TODO Auto-generated method stub
-        return null;
+        return "http";
     }
 
     @Override
     public String getServerName() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.exchangeRequest.getServerName();
     }
 
     @Override
     public int getServerPort() {
-        // TODO Auto-generated method stub
-        return 0;
+        return this.exchangeRequest.getServerPort();
     }
 
     //通过字符流读取，适用于读取文本，不能与 getInputStream 一同使用
@@ -197,12 +201,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void setAttribute(String name, Object o) {
-        // TODO Auto-generated method stub
+        this.attributes.setAttribute(name,o);
     }
 
     @Override
     public void removeAttribute(String name) {
-        // TODO Auto-generated method stub
+        this.attributes.removeAttribute(name);
     }
 
     @Override
@@ -219,7 +223,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        // TODO Auto-generated method stub
         return false;
     }
 
@@ -255,37 +258,31 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public ServletContext getServletContext() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.servletContext;
     }
 
     @Override
     public AsyncContext startAsync() throws IllegalStateException {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public boolean isAsyncStarted() {
-        // TODO Auto-generated method stub
         return false;
     }
 
     @Override
     public boolean isAsyncSupported() {
-        // TODO Auto-generated method stub
         return false;
     }
 
     @Override
     public AsyncContext getAsyncContext() {
-        // TODO Auto-generated method stub
         return null;
     }
 

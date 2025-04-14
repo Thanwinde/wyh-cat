@@ -16,9 +16,12 @@ import jakarta.servlet.WriteListener;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
+
+//这是servlet响应的实现类
 public class HttpServletResponseImpl implements HttpServletResponse {
 
     final HttpExchangeResponse exchangeResponse;
+
 
     final Headers headers;
 
@@ -195,7 +198,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         this.status = sc;
         this.exchangeResponse.sendResponseHeaders(this.status, 0);
         PrintWriter pw = getWriter();
-        pw.write(String.format("<h1>%d %s</h1>", sc, msg));
+        pw.write("<h1>" + sc +"," + msg +"</h1>");
         pw.close();
     }
 
@@ -204,7 +207,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         this.status = sc;
         this.exchangeResponse.sendResponseHeaders(this.status, 0);
         PrintWriter pw = getWriter();
-        pw.write(String.format("<h1>%d %s</h1>", sc, "Error!"));
+        pw.write("<h1>" + sc +"," + "Error!" +"</h1>");
         pw.close();
     }
 

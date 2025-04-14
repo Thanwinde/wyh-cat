@@ -26,7 +26,7 @@ public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeRes
     }
 
     public Integer getStatusCode() {
-        return exchange.getResponseCode();
+        return (Integer) exchange.getResponseCode();
     }
 
     @Override
@@ -62,6 +62,19 @@ public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeRes
            }
        }
         return this.requestBodyData;
+    }
+
+    public String getProtocol(){
+        return this.exchange.getProtocol();
+    }
+
+    public String getServerName(){
+        return this.exchange.getLocalAddress().getAddress().getHostAddress();
+    }
+
+    @Override
+    public int getServerPort() {
+        return this.exchange.getLocalAddress().getPort();
     }
 
     @Override

@@ -8,8 +8,8 @@ import java.nio.file.Path;
  * @description
  **/
 public final class Resource {
-    final Path path;
-    final String name;
+    public final Path path;
+    public final String name;
 
     public Resource(Path path, String name) {
         this.path = path;

@@ -19,4 +19,10 @@ public interface HttpExchangeRequest  {
     InetSocketAddress getLocalAddress();
 
     byte[] getRequestBody() throws IOException;
+
+    String getProtocol();
+
+    String getServerName();
+
+    int getServerPort();
 }
