@@ -3,6 +3,8 @@ package com.wyhCat;
 import com.wyhCat.classloader.Resource;
 import com.wyhCat.classloader.WebAppClassLoader;
 import com.wyhCat.connector.HttpConnector;
+import com.wyhCat.engin.Listener.MySessionAttributeListener;
+import com.wyhCat.engin.Listener.MySessionListener;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.annotation.WebServlet;
@@ -72,7 +74,7 @@ public class Starter {
             WebAppClassLoader classLoader = new WebAppClassLoader(paths[0],paths[1]);
 
             List<Class<?>> servlets = new ArrayList<>();
-            List<Class<?>> listeners = new ArrayList<>();
+            List<Class<?>> listeners = List.of(MySessionListener.class, MySessionAttributeListener.class);
             List<Class<?>> filters = new ArrayList<>();
             Consumer<Resource> handler = r -> {
               if(r.name.endsWith(".class")) {
@@ -136,7 +138,6 @@ public class Starter {
                 return new Path[] {classPath,libPath};
             }
             Path extractPath = Path.of("tmp").toAbsolutePath().normalize();
-            //Path extractPath = Paths.get("E:\\tmp");
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
                     deleteDir(extractPath);

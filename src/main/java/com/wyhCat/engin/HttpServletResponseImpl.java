@@ -196,7 +196,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void sendError(int sc, String msg) throws IOException {
         this.status = sc;
-        this.exchangeResponse.sendResponseHeaders(this.status, 0);
         PrintWriter pw = getWriter();
         pw.write("<h1>" + sc +"," + msg +"</h1>");
         pw.close();
@@ -205,7 +204,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void sendError(int sc) throws IOException {
         this.status = sc;
-        this.exchangeResponse.sendResponseHeaders(this.status, 0);
         PrintWriter pw = getWriter();
         pw.write("<h1>" + sc +"," + "Error!" +"</h1>");
         pw.close();

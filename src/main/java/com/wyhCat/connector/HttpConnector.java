@@ -55,6 +55,7 @@ public class HttpConnector implements HttpHandler,AutoCloseable{
         //设置根路径以及handler（处理请求）
         this.httpServer.start();
         logger.info("wyhCat 启动于 {}:{}", host, port);
+        logger.info("恭喜成功启动wyhCat！");
     }
 
 
